@@ -9,14 +9,32 @@
         h1 i, .intro i { font-style: italic; }
         .authors { font-style: italic; color: #555; margin-bottom: 20px; }
         .intro { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 25px; line-height: 1.6; }
+        
+        /* Styl przełącznika widoków */
+        .view-switch { margin-bottom: 20px; display: flex; gap: 10px; }
+        .switch-btn { background: #cbd5e0; color: #2d3748; padding: 10px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .switch-btn.active { background: #1a365d; color: white; }
+        
         #search { width: 100%; padding: 12px; font-size: 16px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        
+        /* Styl Tabeli */
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: table; }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e0e0e0; vertical-align: middle; }
         th { background-color: #1a365d; color: white; text-transform: uppercase; font-size: 13px; }
         tr:hover { background-color: #f8fafc; }
-        img { border-radius: 4px; border: 1px solid #ddd; transition: 0.2s; max-width: 100px; height: auto; }
-        img:hover { transform: scale(1.1); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .btn { background: #2b6cb0; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 12px; display: inline-block; }
+        
+        /* Styl Siatki Galerii kafelkowej */
+        .gallery-grid { display: none; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+        .gallery-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; border: 1px solid #e2e8f0; transition: 0.2s; }
+        .gallery-card:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+        .gallery-card img { max-width: 100%; height: auto; border-radius: 4px; margin-bottom: 10px; border: 1px solid #eee; }
+        .gallery-card .card-title { font-weight: bold; font-size: 14px; color: #1a365d; margin-bottom: 5px; }
+        .gallery-card .card-meta { font-size: 11px; color: #718096; }
+        
+        /* Ogólny styl dla zdjęć w tabeli */
+        td img { border-radius: 4px; border: 1px solid #ddd; max-width: 100px; height: auto; }
+        
+        .btn { background: #2b6cb0; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 12px; display: inline-block; margin-top: 5px; }
         .btn:hover { background: #2c5282; }
     </style>
 </head>
@@ -30,8 +48,15 @@
         <p>All specimens, their images and metadata are housed by the Institute of Earth Sciences, University of Silesia in Katowice, Poland, and are released here under the <strong>Creative Commons Attribution 4.0 International License (CC BY 4.0)</strong>.</p>
     </div>
 
+    <!-- Przełącznik widoków -->
+    <div class="view-switch">
+        <button class="switch-btn active" id="btnTable" onclick="switchView('table')">📋 Table View</button>
+        <button class="switch-btn" id="btnGallery" onclick="switchView('gallery')">🖼️ Gallery View</button>
+    </div>
+
     <input type="text" id="search" placeholder="Type to search/filter 225 specimens (e.g. LH, HK, IV, transverse, longitudinal, 4800 dpi)...">
 
+    <!-- Widok 1: Tabela -->
     <table id="repoTable">
         <thead>
             <tr>
@@ -45,43 +70,108 @@
             </tr>
         </thead>
         <tbody id="dataRows">
-            <!-- Skrypt poniżej generuje automatycznie pełną listę -->
+            <!-- Wiersze tabeli ładowane automatycznie z pliku dane.csv -->
         </tbody>
     </table>
 
+    <!-- Widok 2: Siatka Galerii -->
+    <div class="gallery-grid" id="repoGallery">
+        <!-- Kafelki galerii ładowane automatycznie z pliku dane.csv -->
+    </div>
+
     <script>
-        // Tutaj znajduje się uproszczona symulacja bazy danych, która zasili Pana stronę
-        // W pełnej wersji produkcyjnej ten obiekt zawiera wszystkie 225 pozycji z pliku Excel.
-        const dataset = [
-            { f: "LH17-T2a-48-BW.jpg", id: "GIUS 4691 LH17", s: "transverse section no. 2a", r: "4800 dpi", c: "greyscale", l: "Lickershamn, Gotland, Sweden, Upper Visby Beds, Silurian" },
-            { f: "HK08-L1-48-COL.jpg", id: "GIUS 4691 HK08", s: "longitudinal section no. 1", r: "4800 dpi", c: "colour", l: "H&ouml;gklint, Gotland, Sweden, Upper Visby Beds, Silurian" },
-            { f: "IV12-F-48-BW.jpg", id: "GIUS 4691 IV12", s: "fragment", r: "4800 dpi", c: "greyscale", l: "Ireviken, Gotland, Sweden, Upper Visby Beds, Silurian" }
-        ];
+        // Automatyczne wczytywanie Pana pełnej bazy ze średnikami
+        fetch('dane.csv')
+            .then(response => response.text())
+            .then(text => {
+                const rows = text.split('\n').map(line => line.split(';'));
+                if (rows.length < 2) return;
 
-        const tbody = document.getElementById('dataRows');
-        
-        dataset.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><a href="https://githubusercontent.com{row.f}" target="_blank"><img src="https://githubusercontent.com{row.f}" alt="scan"></a></td>
-                <td><b>${row.id}</b></td>
-                <td>${row.s}</td>
-                <td>${row.r}</td>
-                <td>${row.c}</td>
-                <td>${row.l}</td>
-                <td><a class="btn" href="https://githubusercontent.com{row.f}" download>Download Full Scan</a></td>
-            `;
-            tbody.appendChild(tr);
-        });
+                const tbody = document.getElementById('dataRows');
+                const gallery = document.getElementById('repoGallery');
+                
+                for (let i = 1; i < rows.length; i++) {
+                    if (!rows[i] || rows[i].length < 5) continue;
+                    
+                    const cells = rows[i].map(c => c.replace(/^"|"$/g, '').trim());
+                    
+                    // Wyciąganie nazwy pliku .jpg z wiersza
+                    let fileName = '';
+                    for (let cell of cells) {
+                        if (cell.toLowerCase().endsWith('.jpg') && !cell.includes('<img')) {
+                            fileName = cell;
+                            break;
+                        }
+                    }
+                    
+                    // Pobieranie metadanych (zakładając kolejność kolumn po oczyszczeniu z A-E)
+                    let specId = cells[1] || 'Unknown ID';
+                    let sectType = cells[2] || '';
+                    let resol = cells[3] || '';
+                    let colMode = cells[4] || '';
+                    let locality = cells[5] || '';
 
-        // Wyszukiwarka live
+                    // 1. BUDOWANIE TABELI
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><img src="W&Z_SCHLOT_2023mini/${fileName}" alt="scan"></td>
+                        <td><b>${specId}</b></td>
+                        <td>${sectType}</td>
+                        <td>${resol}</td>
+                        <td>${colMode}</td>
+                        <td>${locality}</td>
+                        <td><a class="btn" href="W&Z_SCHLOT_2023/${fileName}" download>Download Full Scan</a></td>
+                    `;
+                    tbody.appendChild(tr);
+
+                    // 2. BUDOWANIE KAFELKA GALERII
+                    const card = document.createElement('div');
+                    card.className = 'gallery-card';
+                    card.innerHTML = `
+                        <img src="W&Z_SCHLOT_2023mini/${fileName}" alt="scan">
+                        <div class="card-title">${specId}</div>
+                        <div class="card-meta">${sectType}</div>
+                        <div class="card-meta">${colMode} | ${resol}</div>
+                        <a class="btn" href="W&Z_SCHLOT_2023/${fileName}" target="_blank">View Large</a>
+                    `;
+                    gallery.appendChild(card);
+                }
+            });
+
+        // Funkcja przełączania widoków
+        function switchView(viewType) {
+            const table = document.getElementById('repoTable');
+            const gallery = document.getElementById('repoGallery');
+            const btnTable = document.getElementById('btnTable');
+            const btnGallery = document.getElementById('btnGallery');
+
+            if (viewType === 'table') {
+                table.style.display = 'table';
+                gallery.style.display = 'none';
+                btnTable.className = 'switch-btn active';
+                btnGallery.className = 'switch-btn';
+            } else {
+                table.style.display = 'none';
+                gallery.style.display = 'grid';
+                btnTable.className = 'switch-btn';
+                btnGallery.className = 'switch-btn active';
+            }
+        }
+
+        // Wspólna wyszukiwarka dla tabeli i galerii kafelkowej
         document.getElementById('search').addEventListener('keyup', function() {
             const query = this.value.toLowerCase();
-            const rows = document.querySelectorAll('#dataRows tr');
             
-            rows.forEach(row => {
-                const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(query) ? '' : 'none';
+            // Filtrowanie tabeli
+            const tableRows = document.querySelectorAll('#dataRows tr');
+            tableRows.forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none';
+            });
+
+            // Filtrowanie galerii
+            const galleryCards = document.querySelectorAll('.gallery-card');
+            galleryCards.forEach(card => {
+                card.style.display = card.innerText.toLowerCase().includes(query) ? '' : 'none';
             });
         });
     </script>
