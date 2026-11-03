@@ -80,38 +80,52 @@
     </div>
 
     <script>
-        // Automatyczne wczytywanie Pana pełnej bazy ze średnikami
+    // Automatyczne wczytywanie bazy z inteligentnym dopasowaniem kolumn
         fetch('dane.csv')
             .then(response => response.text())
             .then(text => {
-                const rows = text.split('\n').map(line => line.split(';'));
-                if (rows.length < 2) return;
+                const lines = text.split('\n').map(line => line.split(';'));
+                if (lines.length < 2) return;
+
+                // Oczyszczamy nagłówki z cudzysłowów i sprowadzamy do małych liter dla pewności
+                const headers = lines[0].map(h => h.replace(/"/g, '').trim().toLowerCase());
+                
+                // Dynamicznie szukamy, na której pozycji w pliku CSV leżą konkretne dane
+                const idxFile = headers.findIndex(h => h.includes('plik') || h.includes('file') || h.includes('.jpg'));
+                const idxId = headers.findIndex(h => h.includes('id') || h.includes('okaz') || h.includes('gius'));
+                const idxSection = headers.findIndex(h => h.includes('przekr') || h.includes('section') || h.includes('cięci'));
+                const idxRes = headers.findIndex(h => h.includes('dpi') || h.includes('rozdzielcz') || h.includes('res'));
+                const idxColor = headers.findIndex(h => h.includes('col') || h.includes('bw') || h.includes('kolor'));
+                const idxLoc = headers.findIndex(h => h.includes('lokal') || h.includes('local') || h.includes('stanowis'));
 
                 const tbody = document.getElementById('dataRows');
                 const gallery = document.getElementById('repoGallery');
                 
-                for (let i = 1; i < rows.length; i++) {
-                    if (!rows[i] || rows[i].length < 5) continue;
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i] || lines[i].length < 3) continue;
                     
-                    const cells = rows[i].map(c => c.replace(/^"|"$/g, '').trim());
+                    // Oczyszczanie zawartości komórek
+                    const cells = lines[i].map(c => c.replace(/^"|"$/g, '').trim());
                     
-                    // Wyciąganie nazwy pliku .jpg z wiersza
-                    let fileName = '';
-                    for (let cell of cells) {
-                        if (cell.toLowerCase().endsWith('.jpg') && !cell.includes('<img')) {
-                            fileName = cell;
-                            break;
+                    // Bezpieczne wyciąganie danych na podstawie odnalezionych indeksów kolumn
+                    let fileName = idxFile !== -1 ? cells[idxFile] : '';
+                    let specId = idxId !== -1 ? cells[idxId] : 'Unknown ID';
+                    let sectType = idxSection !== -1 ? cells[idxSection] : '';
+                    let resol = idxRes !== -1 ? cells[idxRes] : '';
+                    let colMode = idxColor !== -1 ? cells[idxColor] : '';
+                    let locality = idxLoc !== -1 ? cells[idxLoc] : 'Gotland, Sweden';
+
+                    // Jeśli nie znaleziono nazwy pliku w nagłówkach, szukamy komórki kończącej się na .jpg
+                    if (!fileName) {
+                        for (let cell of cells) {
+                            if (cell.toLowerCase().endsWith('.jpg') && !cell.includes('<img')) {
+                                fileName = cell;
+                                break;
+                            }
                         }
                     }
-                    
-                    // Pobieranie metadanych (zakładając kolejność kolumn po oczyszczeniu z A-E)
-                    let specId = cells[1] || 'Unknown ID';
-                    let sectType = cells[2] || '';
-                    let resol = cells[3] || '';
-                    let colMode = cells[4] || '';
-                    let locality = cells[5] || '';
 
-                    // 1. BUDOWANIE TABELI
+                    // 1. DYNAMICZNE BUDOWANIE WIERSZA TABELI
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td><img src="W&Z_SCHLOT_2023mini/${fileName}" alt="scan"></td>
@@ -120,60 +134,24 @@
                         <td>${resol}</td>
                         <td>${colMode}</td>
                         <td>${locality}</td>
-                        <td><a class="btn" href="W&Z_SCHLOT_2023/${fileName}" download>Download Full Scan</a></td>
+                        <td><a class="btn" href="https://google.com" target="_blank">Download Full Scan</a></td>
                     `;
                     tbody.appendChild(tr);
 
-                    // 2. BUDOWANIE KAFELKA GALERII
+                    // 2. DYNAMICZNE BUDOWANIE KAFELKA GALERII
                     const card = document.createElement('div');
                     card.className = 'gallery-card';
                     card.innerHTML = `
                         <img src="W&Z_SCHLOT_2023mini/${fileName}" alt="scan">
                         <div class="card-title">${specId}</div>
-                        <div class="card-meta">${sectType}</div>
+                        <div class="card-meta" style="font-weight:bold; color:#2b6cb0;">${sectType}</div>
                         <div class="card-meta">${colMode} | ${resol}</div>
-                        <a class="btn" href="W&Z_SCHLOT_2023/${fileName}" target="_blank">View Large</a>
+                        <div class="card-meta" style="font-style:italic; margin-top:3px;">${locality}</div>
+                        <a class="btn" href="https://google.com" target="_blank">Download Full Scan</a>
                     `;
                     gallery.appendChild(card);
                 }
-            });
-
-        // Funkcja przełączania widoków
-        function switchView(viewType) {
-            const table = document.getElementById('repoTable');
-            const gallery = document.getElementById('repoGallery');
-            const btnTable = document.getElementById('btnTable');
-            const btnGallery = document.getElementById('btnGallery');
-
-            if (viewType === 'table') {
-                table.style.display = 'table';
-                gallery.style.display = 'none';
-                btnTable.className = 'switch-btn active';
-                btnGallery.className = 'switch-btn';
-            } else {
-                table.style.display = 'none';
-                gallery.style.display = 'grid';
-                btnTable.className = 'switch-btn';
-                btnGallery.className = 'switch-btn active';
-            }
-        }
-
-        // Wspólna wyszukiwarka dla tabeli i galerii kafelkowej
-        document.getElementById('search').addEventListener('keyup', function() {
-            const query = this.value.toLowerCase();
-            
-            // Filtrowanie tabeli
-            const tableRows = document.querySelectorAll('#dataRows tr');
-            tableRows.forEach(row => {
-                row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none';
-            });
-
-            // Filtrowanie galerii
-            const galleryCards = document.querySelectorAll('.gallery-card');
-            galleryCards.forEach(card => {
-                card.style.display = card.innerText.toLowerCase().includes(query) ? '' : 'none';
-            });
-        });
+            });    
     </script>
 </body>
 </html> 
