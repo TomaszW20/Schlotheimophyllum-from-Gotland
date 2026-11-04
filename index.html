@@ -43,7 +43,10 @@
             <div class="main-title" id="header-text">Rugose coral <i>Schlotheimophyllum patellatum</i> (Schlotheim, 1820), Upper Visby Beds (Silurian) of Gotland (Sweden) - University of Silesia collection (GIUS)</div>
             <div class="sub-title">anex to paper by Wrzołek & Zatoń in ASGP Journal - <a href="https://doi.org/10.14241/asgp.2023.09" target="_blank">https://doi.org/10.14241/asgp.2023.09</a></div>
         </div>
-        <button class="toggle-btn" onclick="toggleView()">Tryb Pojedynczy</button>
+        <div style="display: flex; gap: 10px;">
+            <button class="toggle-btn" onclick="toggleView()">Tryb Pojedynczy</button>
+            <button class="toggle-btn" style="background: #d32f2f; color: white;" onclick="leaveGallery()">🚪 Opuść galerię</button>
+        </div>
     </header>
 
     <div class="main-content">
@@ -121,7 +124,14 @@
                 if(e.key === 'Escape') showGallery();
             }
         });
-
+function leaveGallery() {
+            if (document.referrer) {
+                window.history.back();
+            } else {
+                window.close();
+            }
+        }
+        
         window.onload = renderGallery;
     </script>
 </body>
