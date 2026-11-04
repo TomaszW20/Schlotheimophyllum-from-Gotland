@@ -128,7 +128,7 @@
                     // 1. DYNAMICZNE BUDOWANIE WIERSZA TABELI
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td><img src="W&Z_SCHLOT_2023mini/${fileName}" alt="scan"></td>
+                        <td><img src="${fileName}" alt="scan"></td>
                         <td><b>${specId}</b></td>
                         <td>${sectType}</td>
                         <td>${resol}</td>
@@ -142,7 +142,7 @@
                     const card = document.createElement('div');
                     card.className = 'gallery-card';
                     card.innerHTML = `
-                        <img src="W&Z_SCHLOT_2023mini/${fileName}" alt="scan">
+                        <img src="${fileName}" alt="scan">
                         <div class="card-title">${specId}</div>
                         <div class="card-meta" style="font-weight:bold; color:#2b6cb0;">${sectType}</div>
                         <div class="card-meta">${colMode} | ${resol}</div>
